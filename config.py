@@ -1,3 +1,5 @@
+from os import environ
+
 BOT_NAME  = environ.get("BOT_NAME", "")
 API_ID    = 21567814
 API_HASH  = "cd7dc5431d449fd795683c550d7bfb7e"
