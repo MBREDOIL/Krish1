@@ -43,13 +43,13 @@ bot = Client("bot",
 # Get the MongoDB collection for this bot
 collection = get_collection(BOT_NAME, MONGO_URI)
 # Constants
-OWNER_IDS = [6126688051]  # Replace with the actual owner user IDs
+OWNER_IDS = [6556141430]  # Replace with the actual owner user IDs
 
 cookies_file_path ="modules/cookies.txt"
 # Global variables
-log_channel_id = [-1002335220633]
-authorized_users = [6243077977,6126688051,6960427846,7245267588]
-ALLOWED_CHANNEL_IDS = [-1002335220633]
+log_channel_id = [-1002494437539]
+authorized_users = [6556141430]
+ALLOWED_CHANNEL_IDS = [-1002494437539]
 my_name = "❤️"
 overlay = None 
 accept_logs = 0
@@ -937,7 +937,7 @@ async def process_file(bot, m, links, b_name, count, end_count, raw_text2, res, 
                 'CR': CR,
                 'raw_text4': raw_text4,
                 'thumb': thumb,
-                'log_channel_id': -1002155787742,
+                'log_channel_id': -1002494437539,
                 'my_name': my_name,
                 'overlay': overlay,
                 'accept_logs': accept_logs
@@ -1365,7 +1365,7 @@ help_text = """
 
  **Example:**
  ```
- /add_channel -100973847334
+ /add_channel -100249443753
  ```
 OR Use /add_chat 
 
@@ -1373,7 +1373,7 @@ OR Use /add_chat
 
  **Example:**
  ```
- /remove_channel -1003947384
+ /remove_channel -100249443753
  ```
 OR Use /remove_chat
 
@@ -1422,7 +1422,7 @@ OWNER_TEXT = """
 
 **Example:**
 ```
-/add_log_channel -100366488017
+/add_log_channel -100249443753
 ```
 
 2. **/accept_logs** - 📥 Set this to **1** if you want the backup.
@@ -1464,14 +1464,14 @@ OWNER_TEXT = """
 
  **Example:**
  ```
- /add_channel -100973847334
+ /add_channel -100249443753
  ```
 
 11. **/remove_channel `<-100channelid>`** - ➖ Remove a channel from the allowed channels list.
 
  **Example:**
  ```
- /remove_channel -1003947384
+ /remove_channel -100249443753
  ```
 
 🚀 **General Commands:**
