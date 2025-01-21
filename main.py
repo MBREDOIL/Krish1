@@ -581,6 +581,72 @@ def save_to_file(video_links, channel_name):
             file.write(f"{number}. {title}: {formatted_url}\n")
     return filename
 
+
+
+
+
+
+
+
+
+
+
+
+# Function to extract URLs from a webpage
+
+@bot.on_message(filters.command('extracturls'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the webpage URL.")
+        input_msg = await client.listen(message.chat.id)
+        webpage_url = input_msg.text
+        await input_msg.delete()
+
+        urls = extract_urls(webpage_url)
+        if urls:
+            output_file = "extracted_urls.txt"
+            save_urls_to_file(urls, output_file)
+            await message.reply_document(document=output_file, caption="Here are the extracted URLs.")
+            os.remove(output_file)
+        else:
+            await message.reply_text("No URLs found or the URL is incorrect.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+def extract_urls(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        urls = [a['href'] for a in soup.find_all('a', href=True)]
+        return urls
+    except requests.RequestException as e:
+        print(f"Error fetching the webpage: {e}")
+        return []
+
+# Function to save URLs to a TXT file
+def save_urls_to_file(urls, filename):
+    try:
+        with open(filename, 'w') as file:
+            for url in urls:
+                file.write(url + '\n')
+        print(f"URLs saved to {filename}")
+    except Exception as e:
+        print(f"Error saving URLs to file: {e}")
+
+
+
+
+
+
+
+
+
+
+
+
+
 #================== TEXT FILE EDITOR =============================
 
 @bot.on_message(filters.command('h2t'))
