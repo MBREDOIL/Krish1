@@ -1471,7 +1471,7 @@ OR Use /remove_chat
 
 📌 **Note:** Commands are restricted to the bot owner or authorized users only.
 
-Feel free to contact @Bhandara_2_O for further assistance or subscription details.
+Feel free to contact @UIHASH for further assistance or subscription details.
 
 ✨ Have fun and happy chatting! ✨
 
@@ -1572,7 +1572,7 @@ OWNER_TEXT = """
 
 📌 **Note:** Commands are restricted to the bot owner or authorized users only.
 
-Feel free to contact @Bhandara_2_O for further assistance or subscription details.
+Feel free to contact @UIHASH for further assistance or subscription details.
 
 ✨ Have fun and happy chatting! ✨
 
