@@ -588,6 +588,68 @@ def save_to_file(video_links, channel_name):
     return filename
 
 
+
+
+
+
+
+
+
+##=======s1
+
+
+
+
+
+
+
+# Function to get the content of a webpage
+def get_webpage_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        print(f"Error fetching webpage content: {e}")
+        return None
+
+# Function to check for updates on the webpage
+def check_for_updates(url, last_content):
+    current_content = get_webpage_content(url)
+    if current_content and current_content != last_content:
+        return current_content
+    return None
+
+@bot.on_message(filters.command('s1'))
+async def track_webpage(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the URL of the webpage you want to track.")
+        input_msg = await client.listen(message.chat.id)
+        url = input_msg.text
+        await input_msg.delete()
+
+        last_content = get_webpage_content(url)
+        if not last_content:
+            await message.reply_text("Failed to fetch the webpage content. Please try again.")
+            return
+
+        await message.reply_text(f"Started tracking updates on {url}. You will be notified of any changes.")
+
+        while True:
+            time.sleep(1800)  # Wait for 30 minutes 
+            updated_content = check_for_updates(url, last_content)
+            if updated_content:
+                await message.reply_text(f"The webpage at {url} has been updated.")
+                last_content = updated_content
+    except Exception as e:
+        print(f"Error in track_webpage: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
+
+
+
+
+
+
 ##=======u1====
 
 
