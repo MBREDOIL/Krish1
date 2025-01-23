@@ -595,7 +595,7 @@ def save_to_file(video_links, channel_name):
 
 
 
-##=======s1
+##=======s1====
 
 
 
@@ -644,6 +644,96 @@ async def track_webpage(client: Client, message: Message):
     except Exception as e:
         print(f"Error in track_webpage: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
+
+
+##=======s2======
+
+
+import os
+import time
+import requests
+from bs4 import BeautifulSoup
+from pyrogram import Client, filters
+from pyrogram.types import Message
+
+# Initialize the Telegram bot
+bot = Client("advanced_webpage_update_tracker_bot")
+
+# Dictionary to store tracked webpages and their last content
+tracked_webpages = {}
+tracking = True
+
+# Function to get the content of a webpage
+def get_webpage_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        print(f"Error fetching webpage content: {e}")
+        return None
+
+# Function to check for updates on the webpage
+def check_for_updates(url, last_content):
+    current_content = get_webpage_content(url)
+    if current_content and current_content != last_content:
+        return current_content
+    return None
+
+@bot.on_message(filters.command('s2'))
+async def track_webpage(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the URL of the webpage you want to track.")
+        input_msg = await client.listen(message.chat.id)
+        url = input_msg.text
+        await input_msg.delete()
+
+        await message.reply_text("Please send the frequency of updates in minutes (e.g., 60 for hourly updates).")
+        input_msg = await client.listen(message.chat.id)
+        frequency = int(input_msg.text)
+        await input_msg.delete()
+
+        last_content = get_webpage_content(url)
+        if not last_content:
+            await message.reply_text("Failed to fetch the webpage content. Please try again.")
+            return
+
+        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time()}
+        await message.reply_text(f"Started tracking updates on {url} every {frequency} minutes. You will be notified of any changes.")
+
+        while tracking:
+            for url, data in tracked_webpages.items():
+                if time.time() - data['last_checked'] >= data['frequency'] * 60:
+                    updated_content = check_for_updates(url, data['last_content'])
+                    if updated_content:
+                        await message.reply_text(f"The webpage at {url} has been updated.")
+                        tracked_webpages[url]['last_content'] = updated_content
+                    tracked_webpages[url]['last_checked'] = time.time()
+            time.sleep(60)  # Check every minute
+    except Exception as e:
+        print(f"Error in track_webpage: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+@bot.on_message(filters.command('stoptracking'))
+async def stop_tracking(client: Client, message: Message):
+    global tracking
+    tracking = False
+    await message.reply_text("Stopped tracking updates on all webpages.")
+
+@bot.on_message(filters.command('restarttracking'))
+async def restart_tracking(client: Client, message: Message):
+    global tracking
+    tracking = True
+    await message.reply_text("Restarted tracking updates on all webpages.")
+    await track_webpage(client, message)
+
+@bot.on_message(filters.command('showtracked'))
+async def show_tracked(client: Client, message: Message):
+    if tracked_webpages:
+        tracked_list = "\n".join([f"{url} (every {data['frequency']} minutes)" for url, data in tracked_webpages.items()])
+        await message.reply_text(f"Currently tracked webpages:\n{tracked_list}")
+    else:
+        await message.reply_text("No webpages are currently being tracked.")
 
 
 
