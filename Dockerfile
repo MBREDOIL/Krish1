@@ -7,11 +7,7 @@ COPY . /app/
 WORKDIR /app/
 
 
-# Use an official Ubuntu runtime as a parent image
-FROM ubuntu:latest
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
 
 # Update the package list and install necessary packages
 RUN apt-get update && apt-get install -y \
