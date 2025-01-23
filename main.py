@@ -753,6 +753,73 @@ async def run_bot(client: Client, message: Message):
 
 
 
+
+##=========u4==========
+
+
+
+
+
+
+# Function to convert PDF to images and add watermark
+def pdf_to_images_with_watermark(pdf_path, output_folder, watermark_text):
+    try:
+        doc = fitz.open(pdf_path)
+        image_paths = []
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap()
+            image_path = os.path.join(output_folder, f"page_{page_num + 1}.png")
+            pix.save(image_path)
+            
+            # Add watermark
+            image = Image.open(image_path)
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.load_default()
+            text_width, text_height = draw.textsize(watermark_text, font)
+            width, height = image.size
+            x = width - text_width - 10
+            y = height - text_height - 10
+            draw.text((x, y), watermark_text, font=font, fill=(255, 255, 255, 128))
+            image.save(image_path)
+            
+            image_paths.append(image_path)
+        return image_paths
+    except Exception as e:
+        print(f"Error converting PDF to images with watermark: {e}")
+        return []
+
+@bot.on_message(filters.command('pdf2'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the PDF file you want to convert to images with a watermark.")
+        input_msg = await client.listen(message.chat.id)
+        pdf_file = await input_msg.download()
+        await input_msg.delete()
+
+        watermark_text = "Your Watermark Text"
+        output_folder = "pdf_images"
+        os.makedirs(output_folder, exist_ok=True)
+        image_paths = pdf_to_images_with_watermark(pdf_file, output_folder, watermark_text)
+
+        if image_paths:
+            for image_path in image_paths:
+                await message.reply_document(document=image_path)
+                os.remove(image_path)
+            os.remove(pdf_file)
+        else:
+            await message.reply_text("Failed to convert the PDF to images with a watermark. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
+
+
+
+
+
 #================== TEXT FILE EDITOR =============================
 
 @bot.on_message(filters.command('h2t'))
