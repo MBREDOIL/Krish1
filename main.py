@@ -37,6 +37,8 @@ from pdf2image import convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 import fitz  # PyMuPDF
 
+from PyPDF2 import PdfFileReader, PdfFileWriter
+
 
 # Initialize bot
 bot = Client("bot",
@@ -813,6 +815,265 @@ async def run_bot(client: Client, message: Message):
         print(f"Error in run_bot: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
+
+
+
+
+
+
+
+##======u5=======
+
+
+
+
+
+
+# Function to add watermark to an image
+def add_watermark(image_path, watermark_text, output_path):
+    try:
+        image = Image.open(image_path)
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+        text_width, text_height = draw.textsize(watermark_text, font)
+        width, height = image.size
+        x = width - text_width - 10
+        y = height - text_height - 10
+        draw.text((x, y), watermark_text, font=font, fill=(255, 255, 255, 128))
+        image.save(output_path)
+        return output_path
+    except Exception as e:
+        print(f"Error adding watermark to image: {e}")
+        return None
+
+@bot.on_message(filters.command('u5'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the image you want to add a watermark to.")
+        input_msg = await client.listen(message.chat.id)
+        image_file = await input_msg.download()
+        await input_msg.delete()
+
+        watermark_text = "Your Watermark Text"
+        output_path = "watermarked_image.png"
+        watermarked_image = add_watermark(image_file, watermark_text, output_path)
+
+        if watermarked_image:
+            await message.reply_document(document=watermarked_image)
+            os.remove(watermarked_image)
+            os.remove(image_file)
+        else:
+            await message.reply_text("Failed to add watermark to the image. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
+
+
+##=======u6======
+
+
+
+
+
+
+# Function to convert PNG to another image format
+def convert_png_to_image(png_path, output_format, output_path):
+    try:
+        image = Image.open(png_path)
+        image = image.convert("RGB")  # Convert to RGB if necessary
+        image.save(output_path, format=output_format)
+        return output_path
+    except Exception as e:
+        print(f"Error converting PNG to {output_format}: {e}")
+        return None
+
+@bot.on_message(filters.command('u6'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the PNG file you want to convert.")
+        input_msg = await client.listen(message.chat.id)
+        png_file = await input_msg.download()
+        await input_msg.delete()
+
+        output_format = "JPEG"  # Change this to the desired output format (e.g., "JPEG", "BMP", "TIFF")
+        output_path = f"converted_image.{output_format.lower()}"
+        converted_image = convert_png_to_image(png_file, output_format, output_path)
+
+        if converted_image:
+            await message.reply_document(document=converted_image)
+            os.remove(converted_image)
+            os.remove(png_file)
+        else:
+            await message.reply_text("Failed to convert the PNG file. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
+
+
+##=======u7=======
+
+
+
+
+
+
+# Function to convert image to PDF
+def image_to_pdf(image_path, output_path):
+    try:
+        image = Image.open(image_path)
+        pdf_path = output_path
+        image.save(pdf_path, "PDF", resolution=100.0)
+        return pdf_path
+    except Exception as e:
+        print(f"Error converting image to PDF: {e}")
+        return None
+
+@bot.on_message(filters.command('u7'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the image file you want to convert to PDF.")
+        input_msg = await client.listen(message.chat.id)
+        image_file = await input_msg.download()
+        await input_msg.delete()
+
+        output_path = "converted_image.pdf"
+        pdf_file = image_to_pdf(image_file, output_path)
+
+        if pdf_file:
+            await message.reply_document(document=pdf_file)
+            os.remove(pdf_file)
+            os.remove(image_file)
+        else:
+            await message.reply_text("Failed to convert the image to PDF. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
+
+##======u8======
+
+
+
+
+
+
+# Function to convert images to a single PDF
+def images_to_pdf(image_paths, output_path):
+    try:
+        images = [Image.open(image_path).convert("RGB") for image_path in image_paths]
+        images[0].save(output_path, save_all=True, append_images=images[1:])
+        return output_path
+    except Exception as e:
+        print(f"Error converting images to PDF: {e}")
+        return None
+
+@bot.on_message(filters.command('u8'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the images you want to convert to PDF. Send each image as a separate message.")
+        image_files = []
+        while True:
+            input_msg = await client.listen(message.chat.id)
+            if input_msg.photo:
+                image_file = await input_msg.download()
+                image_files.append(image_file)
+            else:
+                break
+
+        output_path = "converted_images.pdf"
+        pdf_file = images_to_pdf(image_files, output_path)
+
+        if pdf_file:
+            await message.reply_document(document=pdf_file)
+            os.remove(pdf_file)
+            for image_file in image_files:
+                os.remove(image_file)
+        else:
+            await message.reply_text("Failed to convert the images to PDF. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
+
+
+##======u9======
+
+
+
+
+# Function to add a thumbnail to a PDF
+def add_thumbnail_to_pdf(pdf_path, thumbnail_path, output_path):
+    try:
+        # Open the PDF file
+        pdf_reader = PdfFileReader(pdf_path)
+        pdf_writer = PdfFileWriter()
+
+        # Add all pages from the original PDF to the writer
+        for page_num in range(pdf_reader.getNumPages()):
+            page = pdf_reader.getPage(page_num)
+            pdf_writer.addPage(page)
+
+        # Open the thumbnail image
+        thumbnail = Image.open(thumbnail_path)
+        thumbnail = thumbnail.convert("RGB")
+
+        # Create a new PDF with the thumbnail as the first page
+        thumbnail_pdf_path = "thumbnail.pdf"
+        thumbnail.save(thumbnail_pdf_path, "PDF", resolution=100.0)
+
+        # Merge the thumbnail PDF with the original PDF
+        thumbnail_reader = PdfFileReader(thumbnail_pdf_path)
+        thumbnail_page = thumbnail_reader.getPage(0)
+        pdf_writer.insertPage(thumbnail_page, index=0)
+
+        # Write the updated PDF to the output file
+        with open(output_path, "wb") as output_file:
+            pdf_writer.write(output_file)
+
+        # Clean up temporary files
+        os.remove(thumbnail_pdf_path)
+
+        return output_path
+    except Exception as e:
+        print(f"Error adding thumbnail to PDF: {e}")
+        return None
+
+@bot.on_message(filters.command('addthumbnail'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the PDF file you want to add a thumbnail to.")
+        input_msg = await client.listen(message.chat.id)
+        pdf_file = await input_msg.download()
+        await input_msg.delete()
+
+        await message.reply_text("Please send the thumbnail image.")
+        input_msg = await client.listen(message.chat.id)
+        thumbnail_file = await input_msg.download()
+        await input_msg.delete()
+
+        output_path = "updated_pdf_with_thumbnail.pdf"
+        updated_pdf = add_thumbnail_to_pdf(pdf_file, thumbnail_file, output_path)
+
+        if updated_pdf:
+            await message.reply_document(document=updated_pdf)
+            os.remove(updated_pdf)
+            os.remove(pdf_file)
+            os.remove(thumbnail_file)
+        else:
+            await message.reply_text("Failed to add the thumbnail to the PDF. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 
 
