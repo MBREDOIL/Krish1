@@ -649,15 +649,6 @@ async def track_webpage(client: Client, message: Message):
 ##=======s2======
 
 
-import os
-import time
-import requests
-from bs4 import BeautifulSoup
-from pyrogram import Client, filters
-from pyrogram.types import Message
-
-# Initialize the Telegram bot
-bot = Client("advanced_webpage_update_tracker_bot")
 
 # Dictionary to store tracked webpages and their last content
 tracked_webpages = {}
