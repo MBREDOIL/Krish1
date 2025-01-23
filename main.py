@@ -647,10 +647,12 @@ def save_urls_to_file(urls, filename):
 
 
 
+
+
 # Function to convert PDF to images and add watermark
 def pdf_to_images_with_watermark(pdf_path, output_folder, watermark_text):
     try:
-        images = convert_from_path(pdf_path)
+        images = convert_from_path(pdf_path, poppler_path='C:/poppler/bin')  # Specify the path to poppler if needed
         image_paths = []
         for i, image in enumerate(images):
             image_path = os.path.join(output_folder, f"page_{i + 1}.png")
@@ -691,6 +693,7 @@ async def run_bot(client: Client, message: Message):
     except Exception as e:
         print(f"Error in run_bot: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
+
 
 
 
