@@ -7,11 +7,27 @@ COPY . /app/
 WORKDIR /app/
 
 
+# Use an official Ubuntu runtime as a parent image
+FROM ubuntu:latest
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Update the package list and install necessary packages
 RUN apt-get update && apt-get install -y \
     poppler-utils
 
 # Verify the installation
 RUN pdftoppm -v
+
+# Make port 80 available to the world outside this container
+EXPOSE 80
+
+# Define environment variable
+ENV NAME World
+
+# Run a simple command to keep the container running
+CMD ["sleep", "infinity"]
 
 
 RUN pip3 install -r requirements.txt
