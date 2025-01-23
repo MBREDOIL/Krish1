@@ -36,3 +36,4 @@ itsdangerous==2.0.1
 pdf2image
 poppler-utils
 pymupdf
+PyPDF2
