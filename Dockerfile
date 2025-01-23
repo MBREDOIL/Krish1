@@ -5,6 +5,15 @@ RUN apt-get update -y && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 COPY . /app/
 WORKDIR /app/
+
+
+RUN apt-get update && apt-get install -y \
+    poppler-utils
+
+# Verify the installation
+RUN pdftoppm -v
+
+
 RUN pip3 install -r requirements.txt
 CMD gunicorn app:app & python3 main.py
 
