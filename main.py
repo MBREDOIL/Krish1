@@ -602,6 +602,18 @@ def save_to_file(video_links, channel_name):
 
 
 
+import os
+import time
+import requests
+from bs4 import BeautifulSoup
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from fpdf import FPDF
+import asyncio
+
+# Initialize the Telegram bot
+bot = Client("advanced_webpage_update_tracker_bot")
+
 # Dictionary to store tracked webpages and their last content
 tracked_webpages = {}
 tracking = True
@@ -620,7 +632,7 @@ def get_webpage_content(url):
 def check_for_updates(url, last_content):
     current_content = get_webpage_content(url)
     if current_content and current_content != last_content:
-        retu
+        return current_content
     return None
 
 # Function to generate a PDF of the current webpage
@@ -640,6 +652,18 @@ def generate_webpage_pdf(url, output_path):
         print(f"Error generating PDF of webpage: {e}")
         return None
 
+async def track_webpages():
+    global tracking
+    while tracking:
+        for url, data in tracked_webpages.items():
+            if time.time() - data['last_checked'] >= data['frequency'] * 60:
+                updated_content = check_for_updates(url, data['last_content'])
+                if updated_content:
+                    await bot.send_message(chat_id=data['chat_id'], text=f"The webpage at {url} has been updated. Check it out [here]({url}).")
+                    tracked_webpages[url]['last_content'] = updated_content
+                tracked_webpages[url]['last_checked'] = time.time()
+        await asyncio.sleep(60)  # Check every minute
+
 @bot.on_message(filters.command('trackwebpage'))
 async def track_webpage(client: Client, message: Message):
     try:
@@ -658,18 +682,12 @@ async def track_webpage(client: Client, message: Message):
             await message.reply_text("Failed to fetch the webpage content. Please try again.")
             return
 
-        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time()}
+        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
         await message.reply_text(f"Started tracking updates on {url} every {frequency} minutes. You will be notified of any changes.")
 
-        while tracking:
-            for url, data in tracked_webpages.items():
-                if time.time() - data['last_checked'] >= data['frequency'] * 60:
-                    updated_content = check_for_updates(url, data['last_content'])
-                    if updated_content:
-                        await message.reply_text(f"The webpage at {url} has been updated.")
-                        tracked_webpages[url]['last_content'] = updated_content
-                    tracked_webpages[url]['last_checked'] = time.time()
-            time.sleep(60)  # Check every minute
+        if not tracking:
+            tracking = True
+            asyncio.create_task(track_webpages())
     except Exception as e:
         print(f"Error in track_webpage: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
@@ -685,7 +703,7 @@ async def restart_tracking(client: Client, message: Message):
     global tracking
     tracking = True
     await message.reply_text("Restarted tracking updates on all webpages.")
-    await track_webpage(client, message)
+    asyncio.create_task(track_webpages())
 
 @bot.on_message(filters.command('showtracked'))
 async def show_tracked(client: Client, message: Message):
@@ -695,7 +713,7 @@ async def show_tracked(client: Client, message: Message):
     else:
         await message.reply_text("No webpages are currently being tracked.")
 
-@bot.on_message(filters.command('sts1'))
+@bot.on_message(filters.command('status'))
 async def show_status(client: Client, message: Message):
     while tracking:
         if tracked_webpages:
@@ -703,9 +721,9 @@ async def show_status(client: Client, message: Message):
             await message.reply_text(f"Bot is running. Currently tracked webpages:\n{tracked_list}")
         else:
             await message.reply_text("Bot is running. No webpages are currently being tracked.")
-        time.sleep(600)  # Wait for 10 minutes
+        await asyncio.sleep(300)  # Wait for 5 minutes
 
-@bot.on_message(filters.command('gs1'))
+@bot.on_message(filters.command('generatepdf'))
 async def generate_pdf(client: Client, message: Message):
     try:
         await message.reply_text("Please send the URL of the webpage you want to generate a PDF for.")
@@ -724,8 +742,6 @@ async def generate_pdf(client: Client, message: Message):
     except Exception as e:
         print(f"Error in generate_pdf: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
-
-
 
 
 
