@@ -35,6 +35,8 @@ from yt_dlp import YoutubeDL
 import yt_dlp as youtube_dl
 from pdf2image import convert_from_path
 from PIL import Image, ImageDraw, ImageFont
+import fitz  # PyMuPDF
+
 
 # Initialize bot
 bot = Client("bot",
