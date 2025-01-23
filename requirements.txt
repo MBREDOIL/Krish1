@@ -37,3 +37,4 @@ pdf2image
 poppler-utils
 pymupdf
 PyPDF2
+fpdf
