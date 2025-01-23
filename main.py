@@ -700,6 +700,54 @@ async def run_bot(client: Client, message: Message):
 
 
 
+##======u3======
+
+
+
+
+
+
+# Function to convert PDF to images
+def pdf_to_images(pdf_path, output_folder):
+    try:
+        doc = fitz.open(pdf_path)
+        image_paths = []
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap()
+            image_path = os.path.join(output_folder, f"page_{page_num + 1}.png")
+            pix.save(image_path)
+            image_paths.append(image_path)
+        return image_paths
+    except Exception as e:
+        print(f"Error converting PDF to images: {e}")
+        return []
+
+@bot.on_message(filters.command('pdf1'))
+async def run_bot(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the PDF file you want to convert to images.")
+        input_msg = await client.listen(message.chat.id)
+        pdf_file = await input_msg.download()
+        await input_msg.delete()
+
+        output_folder = "pdf_images"
+        os.makedirs(output_folder, exist_ok=True)
+        image_paths = pdf_to_images(pdf_file, output_folder)
+
+        if image_paths:
+            for image_path in image_paths:
+                await message.reply_document(document=image_path)
+                os.remove(image_path)
+            os.remove(pdf_file)
+        else:
+            await message.reply_text("Failed to convert the PDF to images. Please try again.")
+    except Exception as e:
+        print(f"Error in run_bot: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+
+
 
 
 
