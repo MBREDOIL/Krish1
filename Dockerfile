@@ -20,14 +20,7 @@ RUN apt-get update && apt-get install -y \
 # Verify the installation
 RUN pdftoppm -v
 
-# Make port 80 available to the world outside this container
-EXPOSE 80
 
-# Define environment variable
-ENV NAME World
-
-# Run a simple command to keep the container running
-CMD ["sleep", "infinity"]
 
 
 RUN pip3 install -r requirements.txt
