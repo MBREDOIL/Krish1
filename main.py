@@ -36,6 +36,7 @@ import yt_dlp as youtube_dl
 from pdf2image import convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 import fitz  # PyMuPDF
+from fpdf import FPDF
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
@@ -599,16 +600,7 @@ def save_to_file(video_links, channel_name):
 
 
 
-import os
-import time
-import requests
-from bs4 import BeautifulSoup
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from fpdf import FPDF
 
-# Initialize the Telegram bot
-bot = Client("advanced_webpage_update_tracker_bot")
 
 # Dictionary to store tracked webpages and their last content
 tracked_webpages = {}
@@ -628,7 +620,7 @@ def get_webpage_content(url):
 def check_for_updates(url, last_content):
     current_content = get_webpage_content(url)
     if current_content and current_content != last_content:
-        return current_content
+        retu
     return None
 
 # Function to generate a PDF of the current webpage
