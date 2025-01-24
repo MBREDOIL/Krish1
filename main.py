@@ -739,7 +739,7 @@ async def show_status(client: Client, message: Message):
                 await message.reply_text(f"Bot is running. Currently tracked webpages:\n{tracked_list}")
             else:
                 await message.reply_text("Bot is running. No webpages are currently being tracked.")
-            await asyncio.sleep(300)  # Wait for 5 minutes
+            await asyncio.sleep(360000)  # Wait for 5 minutes
     except Exception as e:
         print(f"Error in show_status: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
