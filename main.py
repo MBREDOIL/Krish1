@@ -16,7 +16,7 @@ from utils import progress_bar
 import core as helper
 from config import BOT_TOKEN, API_ID, API_HASH, MONGO_URI, BOT_NAME
 import aiohttp
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from subprocess import getstatusoutput
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -40,6 +40,8 @@ import fitz  # PyMuPDF
 from fpdf import FPDF
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
+import hashlib
+
 
 
 # Initialize bot
@@ -603,60 +605,86 @@ def save_to_file(video_links, channel_name):
 
 
 
-
-
 # Initialize global variables
 tracked_webpages = {}
 tracking = True
 
-# Function to get the content of a webpage
-def get_webpage_content(url):
+# Configure logging for debugging and tracking
+logging.basicConfig(level=logging.INFO)
+
+
+
+# Persistent storage file for tracked pages
+tracked_pages_file = 'tracked_pages.json'
+
+# Load tracked pages from the persistent file
+def load_tracked_pages():
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # Ensures HTTP request is successful (status code 200)
-        return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Network error: {e}")
-        return None
+        with open(tracked_pages_file, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+
+# Save tracked pages to the persistent file
+def save_tracked_pages():
+    with open(tracked_pages_file, 'w') as file:
+        json.dump(tracked_webpages, file)
+
+# Asynchronous function to fetch webpage content
+async def get_webpage_content(url: str, session: ClientSession):
+    try:
+        async with session.get(url, timeout=ClientTimeout(total=10)) as response:
+            response.raise_for_status()
+            return await response.text()
     except Exception as e:
-        print(f"Error fetching webpage content: {e}")
+        logging.error(f"Error fetching {url}: {e}")
         return None
 
-# Function to check for updates on the webpage
-def check_for_updates(url, last_content):
+# Function to hash webpage content for comparison
+def hash_content(content: str) -> str:
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
+
+# Function to check for changes on the webpage
+async def check_for_updates(url: str, last_content_hash: str, session: ClientSession):
     try:
-        current_content = get_webpage_content(url)
+        current_content = await get_webpage_content(url, session)
         if current_content is None:
             return None
-        if current_content != last_content:
-            print(f"Content has changed for {url}")
-            return current_content
+
+        current_content_hash = hash_content(current_content)
+        if current_content_hash != last_content_hash:
+            logging.info(f"Content has changed for {url}")
+            return current_content, current_content_hash
         return None
     except Exception as e:
-        print(f"Error checking for updates: {e}")
+        logging.error(f"Error checking {url}: {e}")
         return None
 
-# Function to convert time to 12-hour format and GMT+5:30
+# Function to format timestamps to a readable format
 def format_time(timestamp):
     local_time = datetime.utcfromtimestamp(timestamp) + timedelta(hours=5, minutes=30)
     return local_time.strftime("%I:%M %p, %d %b %Y")
 
-async def track_webpages():
+# Function to track all webpages and send notifications on changes
+async def track_webpages(session: ClientSession):
     global tracking
     while tracking:
         for url, data in tracked_webpages.items():
             try:
-                if time.time() - data['last_checked'] >= data['frequency'] * 60:  # Check based on frequency
-                    updated_content = check_for_updates(url, data['last_content'])
-                    if updated_content:
-                        print(f"Webpage at {url} has been updated.")
+                if time.time() - data['last_checked'] >= data['frequency'] * 60:
+                    update = await check_for_updates(url, data['last_content_hash'], session)
+                    if update:
+                        updated_content, new_hash = update
+                        logging.info(f"Webpage at {url} has been updated.")
                         await bot.send_message(chat_id=data['chat_id'], text=f"The webpage at {url} has been updated. Check it out [here]({url}).\n\nUpdated content:\n{updated_content}")
-                        tracked_webpages[url]['last_content'] = updated_content  # Update the last content
+                        tracked_webpages[url]['last_content_hash'] = new_hash
                     tracked_webpages[url]['last_checked'] = time.time()  # Update last checked time
             except Exception as e:
-                print(f"Error in track_webpages: {e}")
+                logging.error(f"Error in tracking {url}: {e}")
+        save_tracked_pages()  # Save changes to tracked pages
         await asyncio.sleep(60)  # Check every minute
 
+# Command to start tracking a webpage
 @bot.on_message(filters.command('trackwebpage'))
 async def track_webpage(client: Client, message: Message):
     try:
@@ -670,35 +698,41 @@ async def track_webpage(client: Client, message: Message):
         frequency = int(input_msg.text)
         await input_msg.delete()
 
-        last_content = get_webpage_content(url)
+        last_content = await get_webpage_content(url, bot.aiohttp_session)
         if not last_content:
             await message.reply_text("Failed to fetch the webpage content. Please try again.")
             return
 
-        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
+        last_content_hash = hash_content(last_content)
+        tracked_webpages[url] = {'last_content_hash': last_content_hash, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
+        save_tracked_pages()  # Save the newly added page
+
         await message.reply_text(f"Started tracking updates on {url} every {frequency} minutes. You will be notified of any changes.")
 
         # Start the webpage tracking if it's not already running
         if not tracking:
             tracking = True
-            asyncio.create_task(track_webpages())
+            asyncio.create_task(track_webpages(bot.aiohttp_session))
     except Exception as e:
-        print(f"Error in track_webpage: {e}")
+        logging.error(f"Error in track_webpage: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
+# Command to stop tracking all webpages
 @bot.on_message(filters.command('stoptracking'))
 async def stop_tracking(client: Client, message: Message):
     global tracking
     tracking = False
     await message.reply_text("Stopped tracking updates on all webpages.")
 
+# Command to restart tracking all webpages
 @bot.on_message(filters.command('restarttracking'))
 async def restart_tracking(client: Client, message: Message):
     global tracking
     tracking = True
     await message.reply_text("Restarted tracking updates on all webpages.")
-    asyncio.create_task(track_webpages())
+    asyncio.create_task(track_webpages(bot.aiohttp_session))
 
+# Command to show all tracked webpages
 @bot.on_message(filters.command('showtracked'))
 async def show_tracked(client: Client, message: Message):
     try:
@@ -708,9 +742,10 @@ async def show_tracked(client: Client, message: Message):
         else:
             await message.reply_text("No webpages are currently being tracked.")
     except Exception as e:
-        print(f"Error in show_tracked: {e}")
+        logging.error(f"Error in show_tracked: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
+# Command to check the bot status
 @bot.on_message(filters.command('status'))
 async def show_status(client: Client, message: Message):
     try:
@@ -720,9 +755,10 @@ async def show_status(client: Client, message: Message):
         else:
             await message.reply_text("Bot is running. No webpages are currently being tracked.")
     except Exception as e:
-        print(f"Error in show_status: {e}")
+        logging.error(f"Error in show_status: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
+# Command to remove a webpage from tracking
 @bot.on_message(filters.command('removetrackingurl'))
 async def remove_tracking_url(client: Client, message: Message):
     try:
@@ -733,12 +769,45 @@ async def remove_tracking_url(client: Client, message: Message):
 
         if url in tracked_webpages:
             del tracked_webpages[url]
+            save_tracked_pages()  # Save changes after removal
             await message.reply_text(f"Removed {url} from tracking.")
         else:
             await message.reply_text(f"{url} is not being tracked.")
     except Exception as e:
-        print(f"Error in remove_tracking_url: {e}")
+        logging.error(f"Error in remove_tracking_url: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
+
+# Command to send tracked webpage content in HTML format
+@bot.on_message(filters.command('sendhtml'))
+async def send_html(client: Client, message: Message):
+    try:
+        url = message.text.split(maxsplit=1)[1]
+        if url in tracked_webpages:
+            data = tracked_webpages[url]
+            content = await get_webpage_content(url, bot.aiohttp_session)
+            if content:
+                await message.reply_text(f"HTML content of {url}:\n\n<pre>{content}</pre>", parse_mode="html")
+            else:
+                await message.reply_text("Failed to fetch the content of the page.")
+        else:
+            await message.reply_text(f"{url} is not being tracked.")
+    except Exception as e:
+        logging.error(f"Error in send_html: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+# Command to send tracked webpage content in JSON format
+@bot.on_message(filters.command('sendjson'))
+async def send_json(client: Client, message: Message):
+    try:
+        url = message.text.split(maxsplit=1)[1]
+        if url in tracked_webpages:
+            data = tracked_webpages[url]
+            json_data = {
+                "url": url,
+                "last_checked": format_time(data['last_checked']),
+
+
+
 
 
 
