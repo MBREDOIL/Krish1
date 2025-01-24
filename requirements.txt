@@ -38,3 +38,4 @@ poppler-utils
 pymupdf
 PyPDF2
 fpdf
+hashlib
