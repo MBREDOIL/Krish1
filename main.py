@@ -795,6 +795,7 @@ async def send_html(client: Client, message: Message):
         logging.error(f"Error in send_html: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
+
 # Command to send tracked webpage content in JSON format
 @bot.on_message(filters.command('sendjson'))
 async def send_json(client: Client, message: Message):
@@ -805,10 +806,16 @@ async def send_json(client: Client, message: Message):
             json_data = {
                 "url": url,
                 "last_checked": format_time(data['last_checked']),
-
-
-
-
+                "frequency": data['frequency'],
+                "last_content_hash": data['last_content_hash'],
+                "chat_id": data['chat_id']
+            }
+            await message.reply_text(f"JSON content of {url}:\n\n<pre>{json.dumps(json_data, indent=2)}</pre>", parse_mode="html")
+        else:
+            await message.reply_text(f"{url} is not being tracked.")
+    except Exception as e:
+        logging.error(f"Error in send_json: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 
 
