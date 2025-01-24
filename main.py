@@ -605,7 +605,7 @@ def save_to_file(video_links, channel_name):
 
 
 
-# Dictionary to store tracked webpages and their last content
+# Initialize global variables
 tracked_webpages = {}
 tracking = True
 
@@ -613,7 +613,7 @@ tracking = True
 def get_webpage_content(url):
     try:
         response = requests.get(url)
-        response.raise_for_status()
+        response.raise_for_status()  # Ensures HTTP request is successful (status code 200)
         return response.text
     except requests.exceptions.RequestException as e:
         print(f"Network error: {e}")
@@ -626,7 +626,10 @@ def get_webpage_content(url):
 def check_for_updates(url, last_content):
     try:
         current_content = get_webpage_content(url)
-        if current_content and current_content != last_content:
+        if current_content is None:
+            return None
+        if current_content != last_content:
+            print(f"Content has changed for {url}")
             return current_content
         return None
     except Exception as e:
@@ -643,12 +646,13 @@ async def track_webpages():
     while tracking:
         for url, data in tracked_webpages.items():
             try:
-                if time.time() - data['last_checked'] >= data['frequency'] * 60:
+                if time.time() - data['last_checked'] >= data['frequency'] * 60:  # Check based on frequency
                     updated_content = check_for_updates(url, data['last_content'])
                     if updated_content:
+                        print(f"Webpage at {url} has been updated.")
                         await bot.send_message(chat_id=data['chat_id'], text=f"The webpage at {url} has been updated. Check it out [here]({url}).\n\nUpdated content:\n{updated_content}")
-                        tracked_webpages[url]['last_content'] = updated_content
-                    tracked_webpages[url]['last_checked'] = time.time()
+                        tracked_webpages[url]['last_content'] = updated_content  # Update the last content
+                    tracked_webpages[url]['last_checked'] = time.time()  # Update last checked time
             except Exception as e:
                 print(f"Error in track_webpages: {e}")
         await asyncio.sleep(60)  # Check every minute
@@ -674,6 +678,7 @@ async def track_webpage(client: Client, message: Message):
         tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
         await message.reply_text(f"Started tracking updates on {url} every {frequency} minutes. You will be notified of any changes.")
 
+        # Start the webpage tracking if it's not already running
         if not tracking:
             tracking = True
             asyncio.create_task(track_webpages())
@@ -734,6 +739,7 @@ async def remove_tracking_url(client: Client, message: Message):
     except Exception as e:
         print(f"Error in remove_tracking_url: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
+
 
 
 
