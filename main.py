@@ -772,29 +772,6 @@ async def generate_pdf(client: Client, message: Message):
         print(f"Error in generate_pdf: {e}")
         await message.reply_text("An error occurred while processing your request. Please try again.")
 
-@bot.on_message(filters.command('addtrackingurl'))
-async def add_tracking_url(client: Client, message: Message):
-    try:
-        await message.reply_text("Please send the URL of the webpage you want to add to tracking.")
-        input_msg = await client.listen(message.chat.id)
-        url = input_msg.text
-        await input_msg.delete()
-
-        await message.reply_text("Please send the frequency of updates in minutes (e.g., 60 for hourly updates).")
-        input_msg = await client.listen(message.chat.id)
-        frequency = int(input_msg.text)
-        await input_msg.delete()
-
-        last_content = get_webpage_content(url)
-        if not last_content:
-            await message.reply_text("Failed to fetch the webpage content. Please try again.")
-            return
-
-        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
-        await message.reply_text(f"Added {url} to tracking with updates every {frequency} minutes.")
-    except Exception as e:
-        print(f"Error in add_tracking_url: {e}")
-        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 @bot.on_message(filters.command('removetrackingurl'))
 async def remove_tracking_url(client: Client, message: Message):
