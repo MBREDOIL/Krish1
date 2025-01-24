@@ -7,6 +7,7 @@ import re
 import sys
 import json
 import time
+from datetime import datetime, timedelta
 import asyncio
 import requests
 import subprocess
@@ -603,6 +604,8 @@ def save_to_file(video_links, channel_name):
 
 
 
+
+
 # Dictionary to store tracked webpages and their last content
 tracked_webpages = {}
 tracking = True
@@ -613,23 +616,33 @@ def get_webpage_content(url):
         response = requests.get(url)
         response.raise_for_status()
         return response.text
+    except requests.exceptions.RequestException as e:
+        print(f"Network error: {e}")
+        return None
     except Exception as e:
         print(f"Error fetching webpage content: {e}")
         return None
 
 # Function to check for updates on the webpage
 def check_for_updates(url, last_content):
-    current_content = get_webpage_content(url)
-    if current_content and current_content != last_content:
-        return current_content
-    return None
+    try:
+        current_content = get_webpage_content(url)
+        if current_content and current_content != last_content:
+            return current_content
+        return None
+    except Exception as e:
+        print(f"Error checking for updates: {e}")
+        return None
 
 # Function to generate a PDF of the current webpage
-def generate_webpage_pdf(url, output_path):
+def generate_webpage_pdf(url, output_path, additional_text=None):
     try:
         response = requests.get(url)
         response.raise_for_status()
         html_content = response.text
+
+        if additional_text:
+            html_content += f"\n\n{additional_text}"
 
         pdf = FPDF()
         pdf.add_page()
@@ -637,20 +650,31 @@ def generate_webpage_pdf(url, output_path):
         pdf.multi_cell(0, 10, html_content)
         pdf.output(output_path)
         return output_path
+    except requests.exceptions.RequestException as e:
+        print(f"Network error: {e}")
+        return None
     except Exception as e:
         print(f"Error generating PDF of webpage: {e}")
         return None
+
+# Function to convert time to 12-hour format and GMT+5:30
+def format_time(timestamp):
+    local_time = datetime.utcfromtimestamp(timestamp) + timedelta(hours=5, minutes=30)
+    return local_time.strftime("%I:%M %p, %d %b %Y")
 
 async def track_webpages():
     global tracking
     while tracking:
         for url, data in tracked_webpages.items():
-            if time.time() - data['last_checked'] >= data['frequency'] * 60:
-                updated_content = check_for_updates(url, data['last_content'])
-                if updated_content:
-                    await bot.send_message(chat_id=data['chat_id'], text=f"The webpage at {url} has been updated. Check it out [here]({url}).")
-                    tracked_webpages[url]['last_content'] = updated_content
-                tracked_webpages[url]['last_checked'] = time.time()
+            try:
+                if time.time() - data['last_checked'] >= data['frequency'] * 60:
+                    updated_content = check_for_updates(url, data['last_content'])
+                    if updated_content:
+                        await bot.send_message(chat_id=data['chat_id'], text=f"The webpage at {url} has been updated. Check it out [here]({url}).\n\nUpdated content:\n{updated_content}")
+                        tracked_webpages[url]['last_content'] = updated_content
+                    tracked_webpages[url]['last_checked'] = time.time()
+            except Exception as e:
+                print(f"Error in track_webpages: {e}")
         await asyncio.sleep(60)  # Check every minute
 
 @bot.on_message(filters.command('trackwebpage'))
@@ -679,7 +703,7 @@ async def track_webpage(client: Client, message: Message):
             asyncio.create_task(track_webpages())
     except Exception as e:
         print(f"Error in track_webpage: {e}")
-        await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 @bot.on_message(filters.command('stoptracking'))
 async def stop_tracking(client: Client, message: Message):
@@ -696,21 +720,29 @@ async def restart_tracking(client: Client, message: Message):
 
 @bot.on_message(filters.command('showtracked'))
 async def show_tracked(client: Client, message: Message):
-    if tracked_webpages:
-        tracked_list = "\n".join([f"{url} (every {data['frequency']} minutes, last checked: {time.ctime(data['last_checked'])})" for url, data in tracked_webpages.items()])
-        await message.reply_text(f"Currently tracked webpages:\n{tracked_list}")
-    else:
-        await message.reply_text("No webpages are currently being tracked.")
+    try:
+        if tracked_webpages:
+            tracked_list = "\n".join([f"{url} (every {data['frequency']} minutes, last checked: {format_time(data['last_checked'])})" for url, data in tracked_webpages.items()])
+            await message.reply_text(f"Currently tracked webpages:\n{tracked_list}")
+        else:
+            await message.reply_text("No webpages are currently being tracked.")
+    except Exception as e:
+        print(f"Error in show_tracked: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 @bot.on_message(filters.command('status'))
 async def show_status(client: Client, message: Message):
-    while tracking:
-        if tracked_webpages:
-            tracked_list = "\n".join([f"{url} (every {data['frequency']} minutes, last checked: {time.ctime(data['last_checked'])})" for url, data in tracked_webpages.items()])
-            await message.reply_text(f"Bot is running. Currently tracked webpages:\n{tracked_list}")
-        else:
-            await message.reply_text("Bot is running. No webpages are currently being tracked.")
-        await asyncio.sleep(300)  # Wait for 5 minutes
+    try:
+        while tracking:
+            if tracked_webpages:
+                tracked_list = "\n".join([f"{url} (every {data['frequency']} minutes, last checked: {format_time(data['last_checked'])})" for url, data in tracked_webpages.items()])
+                await message.reply_text(f"Bot is running. Currently tracked webpages:\n{tracked_list}")
+            else:
+                await message.reply_text("Bot is running. No webpages are currently being tracked.")
+            await asyncio.sleep(300)  # Wait for 5 minutes
+    except Exception as e:
+        print(f"Error in show_status: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 @bot.on_message(filters.command('generatepdf'))
 async def generate_pdf(client: Client, message: Message):
@@ -720,8 +752,16 @@ async def generate_pdf(client: Client, message: Message):
         url = input_msg.text
         await input_msg.delete()
 
+        await message.reply_text("Please send the additional text you want to add to the webpage content (or type 'none' if you don't want to add any text).")
+        input_msg = await client.listen(message.chat.id)
+        additional_text = input_msg.text
+        await input_msg.delete()
+
+        if additional_text.lower() == 'none':
+            additional_text = None
+
         output_path = "webpage.pdf"
-        pdf_file = generate_webpage_pdf(url, output_path)
+        pdf_file = generate_webpage_pdf(url, output_path, additional_text)
 
         if pdf_file:
             await message.reply_document(document=pdf_file)
@@ -730,7 +770,48 @@ async def generate_pdf(client: Client, message: Message):
             await message.reply_text("Failed to generate the PDF of the webpage. Please try again.")
     except Exception as e:
         print(f"Error in generate_pdf: {e}")
-        await message.reply_text("An error occurred while processing your request. Please try again.\n\n{e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+@bot.on_message(filters.command('addtrackingurl'))
+async def add_tracking_url(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the URL of the webpage you want to add to tracking.")
+        input_msg = await client.listen(message.chat.id)
+        url = input_msg.text
+        await input_msg.delete()
+
+        await message.reply_text("Please send the frequency of updates in minutes (e.g., 60 for hourly updates).")
+        input_msg = await client.listen(message.chat.id)
+        frequency = int(input_msg.text)
+        await input_msg.delete()
+
+        last_content = get_webpage_content(url)
+        if not last_content:
+            await message.reply_text("Failed to fetch the webpage content. Please try again.")
+            return
+
+        tracked_webpages[url] = {'last_content': last_content, 'frequency': frequency, 'last_checked': time.time(), 'chat_id': message.chat.id}
+        await message.reply_text(f"Added {url} to tracking with updates every {frequency} minutes.")
+    except Exception as e:
+        print(f"Error in add_tracking_url: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
+
+@bot.on_message(filters.command('removetrackingurl'))
+async def remove_tracking_url(client: Client, message: Message):
+    try:
+        await message.reply_text("Please send the URL of the webpage you want to remove from tracking.")
+        input_msg = await client.listen(message.chat.id)
+        url = input_msg.text
+        await input_msg.delete()
+
+        if url in tracked_webpages:
+            del tracked_webpages[url]
+            await message.reply_text(f"Removed {url} from tracking.")
+        else:
+            await message.reply_text(f"{url} is not being tracked.")
+    except Exception as e:
+        print(f"Error in remove_tracking_url: {e}")
+        await message.reply_text("An error occurred while processing your request. Please try again.")
 
 
 
