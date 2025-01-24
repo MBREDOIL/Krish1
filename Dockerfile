@@ -21,4 +21,5 @@ RUN pdftoppm -v
 RUN python3 -c "import hashlib; print(hashlib.sha256('test'.encode()).hexdigest())"
 
 # Start the app using gunicorn as the main process
-CMD ["gunicorn", "app:app"]
+
+CMD gunicorn app:app & python3 main.py
